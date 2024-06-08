@@ -1,0 +1,11 @@
+[Unit]
+Description=Megaraid spindown script
+DefaultDependencies=no
+Before=shutdown.target halt.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/vrqq/sasspin/shutdown_script.sh
+
+[Install]
+WantedBy=shutdown.target halt.target

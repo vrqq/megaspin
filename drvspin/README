@@ -1,0 +1,54 @@
+## change log from kernel source code
+Code copied from `drivers/scsi/megaraid` in https://mirrors.edge.kernel.org/pub/linux/kernel/v6.x/linux-6.1.tar.xz 
+
+* do not expose SCSI device (/dev/sda)
+commit megaraid_sas_base.c:7579-7581
+```c
+megasas_probe_one() {
+	/*
+	 * Trigger SCSI to scan our drives
+	 */
+	// if (!instance->enable_fw_dev_list ||
+	//     (instance->host_device_list_buf->count > 0))
+	// 	scsi_scan_host(host);
+}
+```
+
+* prohibit auto spin-up when detach or shutdown
+commit megaraid_sas_base.c:7990-7991 and megaraid_sas_base.c:8107-8108
+```
+megasas_detach_one() {
+	// megasas_flush_cache(instance);
+	// megasas_shutdown_controller(instance, MR_DCMD_CTRL_SHUTDOWN);
+}
+
+megasas_shutdown() {
+	// megasas_flush_cache(instance);
+	// megasas_shutdown_controller(instance, MR_DCMD_CTRL_SHUTDOWN);
+}
+```
+
+* rename current kernel module to megaraid_sas_spindown
+modify megaraid_sas_base.c:3513 and megaraid_sas_base.c:8666
+```
+/*
+ * Scsi host template for megaraid_sas driver
+ */
+static struct scsi_host_template megasas_template = {
+    .proc_name = "megaraid_sas_spindown",  // .proc_name = "megaraid_sas",
+}
+
+/*
+ * PCI hotplug support registration structure
+ */
+static struct pci_driver megasas_pci_driver = {
+	.name = "megaraid_sas_spindown",  // .name = "megaraid_sas",
+}
+```
+
+## Build and probe
+* run `modprobe -r megaraid_sas` to unload previous 'installed driver' inside 'kernel module dir'
+* run `lsmod |megaraid` to check module status
+* run `make` to compile
+* run `insmod ./megaraid_sas_spindown.ko` to load driver (auto probe by kernel)
+* run `rmmod ./megaraid_sas_spindown.ko` to unload (auto detach by kerenel)
