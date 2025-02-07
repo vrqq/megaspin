@@ -69,22 +69,22 @@ bool MegaIO::close()
   return ::close(m_fd);
 } //MegaIO::close()
 
-bool MegaIO::disk_spindown(unsigned int m_disknum)
+bool MegaIO::disk_spindown(unsigned int m_hba, unsigned int m_disknum)
 {    
-    std::cout<<"Spin DOWN "<<m_disknum<<"\n";
+    std::cout<<"Spin DOWN "<<m_disknum<<" on hba "<<m_hba<<"\n";
     uint8_t cmd_stop[6]  = {0x1b, 0x01, 0x00, 0x00, 0x00, 0x00};
-    return scsi_cmd(m_disknum, 6, cmd_stop, 0, 0, DXFER_NONE);
+    return scsi_cmd(m_hba, m_disknum, 6, cmd_stop, 0, 0, DXFER_NONE);
 }
 
-bool MegaIO::disk_spinup(unsigned int m_disknum)
+bool MegaIO::disk_spinup(unsigned int m_hba, unsigned int m_disknum)
 {
-    std::cout<<"Spin UP "<<m_disknum<<"\n";
+    std::cout<<"Spin UP "<<m_disknum<<" on hba "<<m_hba<<"\n";
     uint8_t cmd_start[6] = {0x1b, 0x01, 0x00, 0x00, 0x01, 0x00};
-    return scsi_cmd(m_disknum, 6, cmd_start, 0, 0, DXFER_NONE);
+    return scsi_cmd(m_hba, m_disknum, 6, cmd_start, 0, 0, DXFER_NONE);
 }
 
 bool MegaIO::megasas_cmd(
-    unsigned int m_disknum, 
+    unsigned int m_hba, unsigned int m_disknum, 
     int cdbLen, void *cdb, int dataLen, void *data, int dxfer_dir
 ) {
     struct megasas_pthru_frame    *pthru;
@@ -150,7 +150,7 @@ bool MegaIO::megasas_cmd(
 #define MEGA_MBOXCMD_PASSTHRU 0x03
 
 bool MegaIO::megadev_cmd(
-    unsigned int m_disknum, 
+    unsigned int m_hba, unsigned int m_disknum, 
     int cdbLen, void *cdb, int dataLen, void *data, int
 ) {
     struct uioctl_t uio;
