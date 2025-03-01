@@ -19,7 +19,7 @@ This will generate the `.ko` kernel module file.
 
 ---
 
-## Loading the Driver  
+## Loading the Driver manually
 
 Assuming the compiled driver file is named `megaraid_sas_pdoff.ko`, load it with the following commands:  
 
@@ -36,6 +36,19 @@ insmod megaraid_sas_pdoff.ko
 driverctl set-override 0000:07:00.0 megaraid_sas_pdoff
 lspci -v -s 07:00.0
 ```  
+
+## Install to OS Set perferred at OS startup
+**The full step is**
+1. cd into the source directory, here is '07.731.01.00-3'.
+2. build the kernel module.
+3. run 'install_to_kernel.sh' to install.
+4. using driverctl to set driver override.
+```
+cd 07.731.01.00-3
+./compile.sh
+./install_to_kernel.sh
+driverctl set-override 0000:07:00.0 megaraid_sas_pdoff
+```
 
 ---
 
