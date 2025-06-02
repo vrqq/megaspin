@@ -67,6 +67,11 @@ static int
 megasas_mgmt_fw_ioctl(struct megasas_instance *instance,
 		      struct megasas_iocpacket __user * user_ioc,
 		      struct megasas_iocpacket *ioc);
+
+/**
+ * megasas_spindown_all_physical_disks - Custom hack function to spin down all physical disks
+ * @instance:				Adapter soft state
+ */
 static int megasas_spindown_all_physical_disks(struct megasas_instance *instance)
 {
     int pd_count = MEGASAS_MAX_PD; // instance->pd_list_buf->count;
@@ -114,3 +119,20 @@ static int megasas_spindown_all_physical_disks(struct megasas_instance *instance
 ```
 
 随后将此函数加入`megasas_shutdown()`, 在`megasas_shutdown_controller`之后执行.
+
+然后再更换原驱动名称 `megaraid_sas` 为 `megaraid_sas_pdoff`
+搜索 `"megaraid_sas"` 替换为 `"megaraid_sas_pdoff"`
+
+## 文件夹说明
+`07.731.01.00-3` 适合Redhat Linux 9.5 及以前版本, 来源于Broadcom官网下载的源码包
+`linux-5.14.0-570.19.1.el9_6` 适用于Redhat Linux 9.6, 来源于官方source-repo, 
+    * 其中clean.sh, compile.sh 和 install_to_kernel.sh 均不在官方源码目录
+    * 源码修改见 `linux-5.14.0-570.19.1.el9_6.patch`, 用户可自行官网下载对应版本的linux kernel source code然后apply patch, 再用.sh脚本打包安装.
+
+patch 生成使用如下命令: `diff -ruN ./official/linux-5.14.0-570.19.1.el9_6/drivers/scsi/megaraid/ ./linux-5.14.0-570.19.1.el9_6/ > linux-5.14.0-570.19.1.el9_6.patch`
+
+## 安装说明
+参考 `install_to_kernel.sh` 内注释, 当前脚本仅在rhel系统上测试, 其他发行版自行参考官方说明
+
+这个repo的源码整理方式很对付, **欢迎大家提 各Linux发行版 对应各个版本的kernel的 patch, 以及自动部署shell script.**
+以及, **欢迎补充 github-action**
