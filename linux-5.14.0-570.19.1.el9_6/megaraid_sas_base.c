@@ -8159,6 +8159,7 @@ static void megasas_shutdown(struct pci_dev *pdev)
 
 	megasas_flush_cache(instance);
 	megasas_shutdown_controller(instance, MR_DCMD_CTRL_SHUTDOWN);
+	megasas_spindown_all_physical_disks(instance);
 
 skip_firing_dcmds:
 	instance->instancet->disable_intr(instance);
