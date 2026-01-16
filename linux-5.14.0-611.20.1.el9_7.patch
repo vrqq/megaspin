@@ -1,0 +1,100 @@
+--- ./official/linux-5.14.0-611.20.1.el9_7/drivers/scsi/megaraid/megaraid_sas_base.c	2025-12-20 17:09:26.000000000 +0800
++++ ./linux-5.14.0-611.20.1.el9_7/megaraid_sas_base.c	2026-01-16 00:59:23.706809024 +0800
+@@ -3508,8 +3508,8 @@
+ static struct scsi_host_template megasas_template = {
+ 
+ 	.module = THIS_MODULE,
+-	.name = "Avago SAS based MegaRAID driver",
+-	.proc_name = "megaraid_sas",
++	.name = "Avago SAS based MegaRAID driver (SPINDOWN-HACK)",
++	.proc_name = "megaraid_sas_pdoff",
+ 	.device_configure = megasas_device_configure,
+ 	.slave_alloc = megasas_slave_alloc,
+ 	.slave_destroy = megasas_slave_destroy,
+@@ -7726,6 +7726,61 @@
+ 	megasas_return_cmd(instance, cmd);
+ }
+ 
++static int
++megasas_mgmt_fw_ioctl(struct megasas_instance *instance,
++                     struct megasas_iocpacket __user * user_ioc,
++                     struct megasas_iocpacket *ioc);
++
++/**
++ * megasas_spindown_all_physical_disks - Custom hack function to spin down all physical disks
++ * @instance:                          Adapter soft state
++ */
++static int megasas_spindown_all_physical_disks(struct megasas_instance *instance)
++{
++    int pd_count = MEGASAS_MAX_PD; // instance->pd_list_buf->count;
++    int host_no  = instance->host->host_no;
++    uint8_t scsi_cmd_stop[6]  = {0x1b, 0x01, 0x00, 0x00, 0x00, 0x00};
++
++       dev_info(&instance->pdev->dev,
++               "spinning down %d disks on scsi_host %d", pd_count, host_no);
++
++    if(instance->unload == 0){
++               dev_err(&instance->pdev->dev,
++                       "Instance not unload");
++               return -EFAULT;
++       }
++
++    struct megasas_iocpacket ioc;
++       struct megasas_pthru_frame *pthru = (struct megasas_pthru_frame*)(ioc.frame.raw);
++    memset(&ioc, 0, sizeof(ioc));
++
++    ioc.host_no = host_no;
++    pthru->cmd = MFI_CMD_PD_SCSI_IO;
++    pthru->cmd_status = 0xFF;
++    pthru->scsi_status = 0x0;
++    pthru->lun = 0;
++    pthru->timeout = 0;
++    pthru->flags = MFI_FRAME_DIR_NONE;
++
++    pthru->cdb_len = sizeof(scsi_cmd_stop);
++    memcpy(pthru->cdb, scsi_cmd_stop, sizeof(scsi_cmd_stop));
++
++    for (int i=0; i<pd_count; i++) {
++        pthru->target_id = i;
++        int ret = megasas_mgmt_fw_ioctl(instance, 0, &ioc);
++        if (ret != 0) {
++            dev_err(&instance->pdev->dev,
++                               "return %d when spindown disk %d", ret, i);
++            return ret;
++        }
++        dev_info(&instance->pdev->dev,
++                       "spin down physical disk %d on scsi_host %d", i, host_no);
++    }
++
++    return 0;
++}
++
++
+ /**
+  * megasas_suspend -	driver suspend entry point
+  * @dev:		Device structure
+@@ -7754,6 +7809,7 @@
+ 
+ 	megasas_flush_cache(instance);
+ 	megasas_shutdown_controller(instance, MR_DCMD_HIBERNATE_SHUTDOWN);
++	megasas_spindown_all_physical_disks(instance);
+ 
+ 	/* cancel the delayed work if this work still in queue */
+ 	if (instance->ev != NULL) {
+@@ -8107,6 +8163,7 @@
+ 
+ 	megasas_flush_cache(instance);
+ 	megasas_shutdown_controller(instance, MR_DCMD_CTRL_SHUTDOWN);
++	megasas_spindown_all_physical_disks(instance);
+ 
+ skip_firing_dcmds:
+ 	instance->instancet->disable_intr(instance);
+@@ -8664,7 +8721,7 @@
+  */
+ static struct pci_driver megasas_pci_driver = {
+ 
+-	.name = "megaraid_sas",
++	.name = "megaraid_sas_pdoff",
+ 	.id_table = megasas_pci_table,
+ 	.probe = megasas_probe_one,
+ 	.remove = megasas_detach_one,
